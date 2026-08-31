@@ -6,29 +6,29 @@ class Header(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedHeight(50)
-        self.setStyleSheet("background-color: #2d2d2d; border-bottom: 2px solid #007acc;")
+        self.setStyleSheet("background-color: transparent;")
         
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 0, 10, 0)
         
         # Screen Title
         self.title_label = QLabel("DASHBOARD")
-        self.title_label.setFont(QFont("Arial", 16, QFont.Bold))
-        self.title_label.setStyleSheet("color: #007acc;")
+        self.title_label.setFont(QFont("Inter", 16, QFont.Bold))
+        self.title_label.setStyleSheet("color: #ff6b00;")
         
         # Status
         self.vfd_status = QLabel("VFD: ONLINE")
-        self.vfd_status.setStyleSheet("color: #4caf50; font-weight: bold;")
+        self.vfd_status.setStyleSheet("color: #8e8e93; font-weight: bold;")
         
         self.sys_status = QLabel("SYS: OK")
-        self.sys_status.setStyleSheet("color: #4caf50; font-weight: bold;")
+        self.sys_status.setStyleSheet("color: #8e8e93; font-weight: bold;")
         
         self.wifi_status = QLabel("WiFi ████ 82%")
-        self.wifi_status.setStyleSheet("color: #4caf50; font-weight: bold;")
+        self.wifi_status.setStyleSheet("color: #8e8e93; font-weight: bold;")
         
         # Clock
         self.time_label = QLabel("00:00:00")
-        self.time_label.setFont(QFont("Arial", 12, QFont.Bold))
+        self.time_label.setFont(QFont("Inter", 12, QFont.Bold))
         
         layout.addWidget(self.title_label)
         layout.addStretch()
@@ -56,7 +56,7 @@ class NavigationBar(QWidget):
     def __init__(self, switch_callback, parent=None):
         super().__init__(parent)
         self.setFixedHeight(65)
-        self.setStyleSheet("background-color: #252526; border-top: 2px solid #333;")
+        self.setStyleSheet("background-color: transparent;")
         self.switch_callback = switch_callback
         
         layout = QHBoxLayout(self)
@@ -70,7 +70,7 @@ class NavigationBar(QWidget):
             btn = QPushButton(item)
             btn.setCheckable(True)
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            btn.setFont(QFont("Arial", 12, QFont.Bold))
+            btn.setFont(QFont("Inter", 12, QFont.Bold))
             btn.clicked.connect(lambda checked, index=idx: self.nav_clicked(index))
             layout.addWidget(btn)
             self.buttons.append(btn)

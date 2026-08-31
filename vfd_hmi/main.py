@@ -5,39 +5,40 @@ from ui.main_window import MainWindow
 def main():
     app = QApplication(sys.argv)
     
-    # Global styling with colorful, modern industrial theme
+    # Global styling with WOW Glassmorphism theme
     app.setStyleSheet("""
         QWidget {
-            background-color: #121212;
             color: #ffffff;
-            font-family: 'Segoe UI', 'Arial', sans-serif;
+            font-family: 'Segoe UI', 'Inter', 'Roboto', sans-serif;
             font-size: 15px;
         }
         QPushButton {
-            background-color: #2b2b2b;
-            color: #e0e0e0;
-            border: 1px solid #3d3d3d;
+            background-color: rgba(255, 255, 255, 15);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 25);
             border-radius: 8px;
             padding: 10px;
             font-weight: bold;
         }
         QPushButton:hover {
-            background-color: #3b3b3b;
-            border: 1px solid #5a5a5a;
+            background-color: rgba(255, 255, 255, 30);
+            border: 1px solid rgba(255, 255, 255, 50);
         }
         QPushButton:pressed {
-            background-color: #1f1f1f;
+            background-color: rgba(0, 0, 0, 100);
         }
         QPushButton:checked {
-            background-color: #00bcd4;
+            background-color: rgba(255, 107, 0, 60);
+            border: 1px solid #ff6b00;
             color: #ffffff;
-            border: 1px solid #0097a7;
         }
         QLabel {
             background-color: transparent;
         }
         QFrame {
-            border-radius: 8px;
+            border-radius: 12px;
+            background-color: rgba(10, 15, 30, 80);
+            border: 1px solid rgba(255, 255, 255, 15);
         }
     """)
 

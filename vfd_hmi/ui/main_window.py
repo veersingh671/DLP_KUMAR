@@ -15,7 +15,14 @@ class MainWindow(QMainWindow):
         self.setWindowFlags(Qt.FramelessWindowHint)
         
         central_widget = QWidget()
+        central_widget.setObjectName("CentralWidget")
         self.setCentralWidget(central_widget)
+        self.setStyleSheet("""
+            #CentralWidget {
+                border-image: url(assets/bg.jpg) 0 0 0 0 stretch stretch;
+            }
+        """)
+        
         layout = QVBoxLayout(central_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)

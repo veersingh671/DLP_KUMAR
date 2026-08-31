@@ -17,17 +17,18 @@ class SensorsScreen(BaseScreen):
         
         for name, value in sensors:
             frame = QFrame()
-            frame.setStyleSheet("background-color: #333; border-radius: 5px;")
-            frame.setFixedHeight(60)
+            frame.setFixedHeight(70)
             
             h_layout = QHBoxLayout(frame)
+            h_layout.setContentsMargins(20, 10, 20, 10)
             
             lbl_name = QLabel(name)
-            lbl_name.setFont(QFont("Arial", 14, QFont.Bold))
-            lbl_name.setStyleSheet("color: #aaaaaa;")
+            lbl_name.setFont(QFont("Inter", 14, QFont.Bold))
+            lbl_name.setStyleSheet("color: #8e8e93;")
             
             lbl_val = QLabel(value)
-            lbl_val.setFont(QFont("Arial", 18, QFont.Bold))
+            lbl_val.setFont(QFont("Inter", 18, QFont.Bold))
+            lbl_val.setStyleSheet("color: #ffffff;")
             lbl_val.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             
             h_layout.addWidget(lbl_name)

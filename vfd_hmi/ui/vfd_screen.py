@@ -41,18 +41,17 @@ class VFDScreen(BaseScreen):
         
         grid.addLayout(ctrl_layout, 2, 1)
         
-        # Action Buttons
         btn_layout = QHBoxLayout()
         self.btn_start = QPushButton("START")
-        self.btn_start.setStyleSheet("background-color: #4caf50; color: white; min-height: 60px;")
+        self.btn_start.setStyleSheet("background-color: #ff6b00; color: white; min-height: 60px; font-size: 18px;")
         self.btn_start.clicked.connect(self.start_vfd)
         
         self.btn_stop = QPushButton("STOP")
-        self.btn_stop.setStyleSheet("background-color: #f44336; color: white; min-height: 60px;")
+        self.btn_stop.setStyleSheet("background-color: rgba(255, 59, 48, 40); border: 1px solid #ff3b30; color: #ff3b30; min-height: 60px; font-size: 18px;")
         self.btn_stop.clicked.connect(self.stop_vfd)
         
-        self.btn_reset = QPushButton("RESET FAULT")
-        self.btn_reset.setStyleSheet("background-color: #ff9800; color: white; min-height: 60px;")
+        self.btn_reset = QPushButton("RESET")
+        self.btn_reset.setStyleSheet("background-color: rgba(255, 255, 255, 10); color: #8e8e93; min-height: 60px; font-size: 18px; border: 1px solid rgba(255,255,255,30);")
         self.btn_reset.clicked.connect(lambda: print("Fault Reset Clicked"))
         
         btn_layout.addWidget(self.btn_start)
@@ -75,23 +74,33 @@ class VFDScreen(BaseScreen):
     def start_vfd(self):
         self.is_running = True
         self.lbl_status_val.setText("RUNNING")
-        self.lbl_status_val.setStyleSheet("color: #4caf50;")
+        self.lbl_status_val.setStyleSheet("color: #ff6b00;")
 
     def stop_vfd(self):
         self.is_running = False
         self.lbl_status_val.setText("STOPPED")
-        self.lbl_status_val.setStyleSheet("color: #f44336;")
+        self.lbl_status_val.setStyleSheet("color: #8e8e93;")
         
     def add_stat(self, grid, label, value, row, col, color="#ffffff"):
+        from PyQt5.QtWidgets import QFrame, QVBoxLayout
+        frame = QFrame()
+        
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(15, 10, 15, 10)
+        
         lbl_title = QLabel(label)
-        lbl_title.setFont(QFont("Arial", 10))
-        lbl_title.setStyleSheet("color: #aaaaaa;")
+        lbl_title.setFont(QFont("Inter", 11))
+        lbl_title.setStyleSheet("color: #8e8e93; border: none;")
         
         lbl_val = QLabel(value)
-        lbl_val.setFont(QFont("Arial", 18, QFont.Bold))
-        lbl_val.setStyleSheet(f"color: {color};")
+        lbl_val.setFont(QFont("Inter", 24, QFont.Bold))
+        lbl_val.setStyleSheet("color: #ffffff; border: none;")
+        lbl_val.setAlignment(Qt.AlignRight | Qt.AlignBottom)
         
-        grid.addWidget(lbl_title, row * 2, col)
-        grid.addWidget(lbl_val, row * 2 + 1, col)
+        layout.addWidget(lbl_title)
+        layout.addStretch()
+        layout.addWidget(lbl_val)
+        
+        grid.addWidget(frame, row, col)
         
         return lbl_val

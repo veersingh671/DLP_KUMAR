@@ -16,17 +16,17 @@ class ActuatorsScreen(BaseScreen):
         
         for name, state, color in actuators:
             frame = QFrame()
-            frame.setStyleSheet("background-color: #333; border-radius: 5px;")
-            frame.setFixedHeight(60)
+            frame.setFixedHeight(70)
             
             h_layout = QHBoxLayout(frame)
+            h_layout.setContentsMargins(20, 10, 20, 10)
             
             lbl_name = QLabel(name)
-            lbl_name.setFont(QFont("Arial", 14, QFont.Bold))
-            lbl_name.setStyleSheet("color: #aaaaaa;")
+            lbl_name.setFont(QFont("Inter", 14, QFont.Bold))
+            lbl_name.setStyleSheet("color: #8e8e93;")
             
             lbl_state = QLabel(state)
-            lbl_state.setFont(QFont("Arial", 16, QFont.Bold))
+            lbl_state.setFont(QFont("Inter", 16, QFont.Bold))
             lbl_state.setStyleSheet(f"color: {color};")
             lbl_state.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             

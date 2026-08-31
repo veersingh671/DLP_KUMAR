@@ -16,18 +16,18 @@ class SettingsScreen(BaseScreen):
         
         for title, desc in settings_items:
             frame = QFrame()
-            frame.setStyleSheet("background-color: #333; border-radius: 5px;")
             frame.setFixedHeight(70)
             
             f_layout = QVBoxLayout(frame)
-            f_layout.setContentsMargins(10, 5, 10, 5)
+            f_layout.setContentsMargins(15, 10, 15, 10)
             
             lbl_title = QLabel(title)
-            lbl_title.setFont(QFont("Arial", 12, QFont.Bold))
-            lbl_title.setStyleSheet("color: #007acc;")
+            lbl_title.setFont(QFont("Inter", 12, QFont.Bold))
+            lbl_title.setStyleSheet("color: #ff6b00;")
             
             lbl_desc = QLabel(desc)
-            lbl_desc.setFont(QFont("Arial", 12))
+            lbl_desc.setFont(QFont("Inter", 12))
+            lbl_desc.setStyleSheet("color: #ffffff;")
             
             f_layout.addWidget(lbl_title)
             f_layout.addWidget(lbl_desc)
@@ -38,11 +38,12 @@ class SettingsScreen(BaseScreen):
         
         btn_layout = QHBoxLayout()
         btn_reboot = QPushButton("REBOOT SYSTEM")
-        btn_reboot.setStyleSheet("background-color: #f44336; color: white;")
+        btn_reboot.setStyleSheet("background-color: rgba(255, 59, 48, 40); border: 1px solid #ff3b30; color: #ff3b30;")
         btn_reboot.setFixedHeight(50)
         
         btn_exit = QPushButton("EXIT APP")
         btn_exit.setFixedHeight(50)
+        btn_exit.setStyleSheet("background-color: rgba(255, 255, 255, 10); border: 1px solid #ff6b00; color: #ff6b00;")
         btn_exit.clicked.connect(self.exit_app)
         
         btn_layout.addWidget(btn_reboot)
