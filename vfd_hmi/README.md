@@ -1168,25 +1168,76 @@ The application should continue running.
 
 ---
 
-# 39. TESTING
+# 39. TESTING & EXECUTION COMMANDS
 
-Test each layer independently.
+Test each layer independently. Automated unit and UI tests are located in `tests/`.
 
-Tests must eventually cover:
+### 1. Simple 1-Click Launch & Direct Commands
 
-1. UI startup.
-2. Navigation.
-3. Simulation mode.
-4. VFD communication.
-5. VFD read functions.
-6. VFD write functions.
-7. Parameter validation.
-8. Sensor handling.
-9. Actuator handling.
-10. Alarm handling.
-11. Network status.
-12. Logging.
-13. Communication failure recovery.
+* **Option A: 1-Click Launch (Windows)**
+  Double-click `run_hmi.bat` in the root folder, or execute:
+  ```cmd
+  run_hmi.bat
+  ```
+
+* **Option B: Direct Python Execution**
+  ```bash
+  python main.py
+  ```
+
+* **Option C: Capture PNG Previews of All 7 Screens**
+  ```bash
+  python capture_screens.py
+  ```
+
+### 2. Run All Automated Unit & UI Tests
+Run the complete test suite covering VFD logic, sensor threshold transitions, 800x480 geometry, and navigation:
+
+```bash
+# Navigate to the vfd_hmi directory:
+cd "vfd_hmi"
+
+# Execute all discovered unit tests with verbose output:
+python -m unittest discover -s tests -p "test_*.py" -v
+```
+
+### 3. Run Individual Test Suites
+
+* **VFD Controller & Physics Simulation:**
+  ```bash
+  python -m unittest tests/test_vfd.py -v
+  ```
+  *(Tests start/stop, frequency clamp bounds 0..50Hz, acceleration/deceleration ramp dynamics, direction toggles, and fault trip/reset).*
+
+* **Sensors & Threshold Safety:**
+  ```bash
+  python -m unittest tests/test_sensors.py -v
+  ```
+  *(Tests multi-sensor initialization, span limits, and Normal -> Warning -> Critical state transitions).*
+
+* **800x480 Touchscreen UI & Navigation:**
+  ```bash
+  python -m unittest tests/test_ui.py -v
+  ```
+  *(Tests strict 800x480 window resolution, 7 stacked screens, touch navigation switching, and Header telemetry data-binding).*
+
+### 4. Headless Automated Testing (Raspberry Pi / CI / Remote SSH)
+For headless verification without an active X11 display:
+
+* **Linux / Raspberry Pi:**
+  ```bash
+  QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -p "test_*.py" -v
+  ```
+
+* **Windows PowerShell:**
+  ```powershell
+  $env:QT_QPA_PLATFORM="offscreen"; python -m unittest discover -s tests -p "test_*.py" -v
+  ```
+
+### 5. Syntax & Compilation Check
+```bash
+python -m compileall .
+```
 
 ---
 
