@@ -1,11 +1,12 @@
 """
 VFD Parameter Screen for DLP KUMAR VFD HMI.
-Provides parameter inspection and safe modification with range checking.
-Includes on-screen touch editing dialog.
+ISA-101 High-Performance SCADA Parameter Management for Fuji FRENIC-Mini C2.
+Provides clean parameter inspection, safe modification with range checking,
+and on-screen industrial touch numpad dialog.
 """
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QScrollArea, QDialog, QLineEdit
+    QFrame, QScrollArea, QDialog, QLineEdit, QGridLayout
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
@@ -22,9 +23,9 @@ class TouchEditDialog(QDialog):
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
         self.setStyleSheet("""
             QDialog {
-                background-color: #0f1624;
-                border: 2px solid #ff7a00;
-                border-radius: 10px;
+                background-color: #0c1017;
+                border: 1px solid #3b82f6;
+                border-radius: 8px;
             }
         """)
         
@@ -33,34 +34,34 @@ class TouchEditDialog(QDialog):
         layout.setSpacing(8)
         
         # Header
-        lbl_title = QLabel(f"EDIT: {param_info.get('name', 'Parameter')}")
-        lbl_title.setFont(QFont("Segoe UI", 11, QFont.Bold))
-        lbl_title.setStyleSheet("color: #ff7a00; border: none;")
+        fcode = param_info.get('fuji_code') or param_info.get('id', '')
+        lbl_title = QLabel(f"EDIT: {fcode} - {param_info.get('name', 'Parameter')}")
+        lbl_title.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        lbl_title.setStyleSheet("color: #f1f5f9; border: none;")
         layout.addWidget(lbl_title)
         
         # Limits Info
-        lbl_limits = QLabel(f"Range: {param_info.get('min')} to {param_info.get('max')} {param_info.get('unit')}")
-        lbl_limits.setFont(QFont("Segoe UI", 9))
+        lbl_limits = QLabel(f"Allowed Range: {param_info.get('min')} to {param_info.get('max')} {param_info.get('unit')}")
+        lbl_limits.setFont(QFont("Segoe UI", 8))
         lbl_limits.setStyleSheet("color: #64748b; border: none;")
         layout.addWidget(lbl_limits)
         
         # Input Box
         self.input_field = QLineEdit(str(current_val))
-        self.input_field.setFixedHeight(44)
+        self.input_field.setFixedHeight(42)
         self.input_field.setFont(QFont("Consolas", 18, QFont.Bold))
         self.input_field.setAlignment(Qt.AlignCenter)
         self.input_field.setStyleSheet("""
             QLineEdit {
-                background-color: #0b0f19;
+                background-color: #090d13;
                 color: #f8fafc;
-                border: 1px solid #334155;
-                border-radius: 6px;
+                border: 1px solid #1e293b;
+                border-radius: 5px;
             }
         """)
         layout.addWidget(self.input_field)
         
         # Numpad Grid
-        from PyQt5.QtWidgets import QGridLayout
         grid = QGridLayout()
         grid.setSpacing(6)
         
@@ -73,12 +74,12 @@ class TouchEditDialog(QDialog):
         
         for text, r, c in buttons:
             btn = QPushButton(text)
-            btn.setFixedHeight(38)
-            btn.setFont(QFont("Segoe UI", 12, QFont.Bold))
+            btn.setFixedHeight(36)
+            btn.setFont(QFont("Segoe UI", 11, QFont.Bold))
             btn.setStyleSheet("""
                 QPushButton {
                     background-color: #1e293b;
-                    color: #f8fafc;
+                    color: #f1f5f9;
                     border: 1px solid #334155;
                     border-radius: 4px;
                 }
@@ -94,20 +95,20 @@ class TouchEditDialog(QDialog):
         # Action Buttons (Cancel / Confirm)
         act_row = QHBoxLayout()
         btn_cancel = QPushButton("CANCEL")
-        btn_cancel.setFixedHeight(42)
-        btn_cancel.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        btn_cancel.setFixedHeight(38)
+        btn_cancel.setFont(QFont("Segoe UI", 9, QFont.Bold))
         btn_cancel.setStyleSheet("""
             background-color: #1e293b; color: #94a3b8;
-            border: 1px solid #334155; border-radius: 6px;
+            border: 1px solid #334155; border-radius: 4px;
         """)
         btn_cancel.clicked.connect(self.reject)
         
-        btn_confirm = QPushButton("APPLY")
-        btn_confirm.setFixedHeight(42)
-        btn_confirm.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        btn_confirm = QPushButton("APPLY SETTING")
+        btn_confirm.setFixedHeight(38)
+        btn_confirm.setFont(QFont("Segoe UI", 9, QFont.Bold))
         btn_confirm.setStyleSheet("""
-            background-color: #ff7a00; color: #ffffff;
-            border: 1px solid #ea580c; border-radius: 6px;
+            background-color: #2563eb; color: #ffffff;
+            border: 1px solid #3b82f6; border-radius: 4px;
         """)
         btn_confirm.clicked.connect(self._on_confirm)
         
@@ -136,9 +137,9 @@ class TouchEditDialog(QDialog):
                 self.result_value = val
                 self.accept()
             else:
-                self.input_field.setStyleSheet("background-color: #0b0f19; color: #ef4444; border: 2px solid #ef4444; border-radius: 6px;")
+                self.input_field.setStyleSheet("background-color: #090d13; color: #ef4444; border: 1px solid #ef4444; border-radius: 5px;")
         except ValueError:
-            self.input_field.setStyleSheet("background-color: #0b0f19; color: #ef4444; border: 2px solid #ef4444; border-radius: 6px;")
+            self.input_field.setStyleSheet("background-color: #090d13; color: #ef4444; border: 1px solid #ef4444; border-radius: 5px;")
 
 
 class ParametersScreen(BaseScreen):
@@ -160,20 +161,20 @@ class ParametersScreen(BaseScreen):
         
         # Bottom Controls
         bottom_row = QHBoxLayout()
-        btn_reload = QPushButton("↻  RELOAD FROM VFD")
-        btn_reload.setFixedHeight(46)
-        btn_reload.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        btn_reload = QPushButton("↻  RELOAD DRIVE PARAMETERS")
+        btn_reload.setFixedHeight(40)
+        btn_reload.setFont(QFont("Segoe UI", 9, QFont.Bold))
         btn_reload.setStyleSheet("""
             QPushButton {
-                background-color: #1e293b; color: #38bdf8;
-                border: 1px solid #334155; border-radius: 6px;
+                background-color: #1e293b; color: #cbd5e1;
+                border: 1px solid #334155; border-radius: 4px;
             }
-            QPushButton:hover { background-color: #334155; }
+            QPushButton:hover { background-color: #2563eb; color: #ffffff; border: 1px solid #3b82f6; }
         """)
         btn_reload.clicked.connect(self._reload_params)
         
-        self.lbl_status = QLabel("PARAMETERS READY")
-        self.lbl_status.setFont(QFont("Segoe UI", 9))
+        self.lbl_status = QLabel("PARAMETERS SYNCHRONIZED")
+        self.lbl_status.setFont(QFont("Consolas", 9))
         self.lbl_status.setStyleSheet("color: #64748b;")
         
         bottom_row.addWidget(btn_reload)
@@ -187,7 +188,6 @@ class ParametersScreen(BaseScreen):
             self.populate_parameters(self.controller.parameters)
 
     def populate_parameters(self, params_list):
-        # Clear existing
         while self.scroll_layout.count():
             item = self.scroll_layout.takeAt(0)
             if item.widget():
@@ -195,31 +195,42 @@ class ParametersScreen(BaseScreen):
                 
         for param in params_list:
             card = QFrame()
-            card.setFixedHeight(56)
+            card.setFixedHeight(52)
             card.setStyleSheet("""
                 QFrame {
-                    background-color: #121824;
+                    background-color: #131923;
                     border: 1px solid #1e293b;
-                    border-radius: 6px;
+                    border-radius: 5px;
                 }
             """)
             c_layout = QHBoxLayout(card)
-            c_layout.setContentsMargins(14, 4, 14, 4)
+            c_layout.setContentsMargins(12, 4, 12, 4)
             c_layout.setSpacing(10)
             
-            # Param ID
-            lbl_id = QLabel(param.get("id", "P00"))
-            lbl_id.setFont(QFont("Consolas", 11, QFont.Bold))
-            lbl_id.setStyleSheet("color: #ff7a00; border: none; min-width: 38px;")
+            # Param Fuji Code / ID Badge
+            fcode = param.get("fuji_code") or param.get("id", "P00")
+            lbl_id = QLabel(fcode)
+            lbl_id.setFont(QFont("Consolas", 10, QFont.Bold))
+            lbl_id.setAlignment(Qt.AlignCenter)
+            lbl_id.setFixedSize(50, 26)
+            lbl_id.setStyleSheet("""
+                color: #93c5fd;
+                background-color: #090d13;
+                border: 1px solid #1e293b;
+                border-radius: 3px;
+            """)
             
             # Name & Reg
             name_box = QVBoxLayout()
+            name_box.setSpacing(1)
             lbl_name = QLabel(param.get("name", "Unknown"))
-            lbl_name.setFont(QFont("Segoe UI", 10, QFont.Bold))
-            lbl_name.setStyleSheet("color: #f8fafc; border: none;")
+            lbl_name.setFont(QFont("Segoe UI", 9, QFont.Bold))
+            lbl_name.setStyleSheet("color: #f1f5f9; border: none;")
             
-            lbl_sub = QLabel(f"Reg: {param.get('register')} | Range: {param.get('min')}..{param.get('max')} {param.get('unit')}")
-            lbl_sub.setFont(QFont("Segoe UI", 8))
+            hex_reg = param.get("hex_register", f"0x{param.get('register', 0):04X}")
+            dec_reg = param.get("register", 0)
+            lbl_sub = QLabel(f"Modbus: {hex_reg} (Dec: {dec_reg}) | Limits: {param.get('min')} - {param.get('max')} {param.get('unit')}")
+            lbl_sub.setFont(QFont("Consolas", 7))
             lbl_sub.setStyleSheet("color: #64748b; border: none;")
             
             name_box.addWidget(lbl_name)
@@ -227,20 +238,20 @@ class ParametersScreen(BaseScreen):
             
             # Value Pill
             lbl_val = QLabel(f"{param.get('value')} {param.get('unit')}")
-            lbl_val.setFont(QFont("Consolas", 13, QFont.Bold))
-            lbl_val.setStyleSheet("color: #38bdf8; border: none; min-width: 90px;")
+            lbl_val.setFont(QFont("Consolas", 12, QFont.Bold))
+            lbl_val.setStyleSheet("color: #f8fafc; border: none; min-width: 90px;")
             lbl_val.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             
             # Edit Button
             btn_edit = QPushButton("EDIT")
-            btn_edit.setFixedSize(65, 34)
-            btn_edit.setFont(QFont("Segoe UI", 9, QFont.Bold))
+            btn_edit.setFixedSize(62, 32)
+            btn_edit.setFont(QFont("Segoe UI", 8, QFont.Bold))
             btn_edit.setStyleSheet("""
                 QPushButton {
-                    background-color: #1e293b; color: #f8fafc;
+                    background-color: #1e293b; color: #cbd5e1;
                     border: 1px solid #334155; border-radius: 4px;
                 }
-                QPushButton:hover { background-color: #ff7a00; color: #ffffff; border: 1px solid #ea580c; }
+                QPushButton:hover { background-color: #2563eb; color: #ffffff; border: 1px solid #3b82f6; }
             """)
             btn_edit.clicked.connect(lambda checked, p=param: self._edit_param(p))
             

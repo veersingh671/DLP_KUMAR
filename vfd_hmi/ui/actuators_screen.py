@@ -1,6 +1,7 @@
 """
 Actuators Screen for DLP KUMAR VFD HMI.
-Allows operators to inspect feedback and toggle equipment states (Motor, Fan, Valve, Brake).
+ISA-101 Industrial Switchgear Control for Motor, Cooling Fan, Solenoid Valve, and Brake.
+Features verified contactor feedback and interlock validation.
 """
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame
@@ -15,12 +16,12 @@ class ActuatorRowWidget(QFrame):
         super().__init__(parent)
         self.actuator_id = actuator.id
         self.toggle_callback = toggle_callback
-        self.setFixedHeight(68)
+        self.setFixedHeight(64)
         self.setStyleSheet("""
             QFrame {
-                background-color: #121824;
+                background-color: #131923;
                 border: 1px solid #1e293b;
-                border-radius: 8px;
+                border-radius: 6px;
             }
         """)
         
@@ -30,14 +31,21 @@ class ActuatorRowWidget(QFrame):
         
         # Name and Type
         info_col = QVBoxLayout()
-        info_col.setSpacing(2)
+        info_col.setSpacing(1)
         
         self.lbl_name = QLabel(actuator.name.upper())
-        self.lbl_name.setFont(QFont("Segoe UI", 11, QFont.Bold))
-        self.lbl_name.setStyleSheet("color: #f8fafc; border: none;")
+        self.lbl_name.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        self.lbl_name.setStyleSheet("color: #f1f5f9; border: none;")
         
-        self.lbl_type = QLabel(f"Equipment Type: {actuator.equipment_type}")
-        self.lbl_type.setFont(QFont("Segoe UI", 8))
+        coil_addrs = {
+            "A01": "Coil 0x0000 (VFD Main Run)",
+            "A02": "Coil 0x0001 (Forced Fan)",
+            "A03": "Coil 0x0002 (Lube Valve)",
+            "A04": "Coil 0x0003 (Mech Brake)"
+        }
+        addr = coil_addrs.get(actuator.id, "Coil 0x0000")
+        self.lbl_type = QLabel(f"Equipment: {actuator.equipment_type}  •  RS-485 Modbus: {addr}")
+        self.lbl_type.setFont(QFont("Consolas", 8))
         self.lbl_type.setStyleSheet("color: #64748b; border: none;")
         
         info_col.addWidget(self.lbl_name)
@@ -48,42 +56,40 @@ class ActuatorRowWidget(QFrame):
         
         # Feedback Badge
         self.lbl_fb = QLabel("FB: OFF")
-        self.lbl_fb.setFont(QFont("Segoe UI", 9, QFont.Bold))
+        self.lbl_fb.setFont(QFont("Segoe UI", 8, QFont.Bold))
         self.lbl_fb.setAlignment(Qt.AlignCenter)
-        self.lbl_fb.setFixedSize(80, 30)
+        self.lbl_fb.setFixedSize(86, 28)
         layout.addWidget(self.lbl_fb)
         
         # Action Toggle Button
         self.btn_toggle = QPushButton("TURN ON")
-        self.btn_toggle.setFixedSize(130, 48)
-        self.btn_toggle.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        self.btn_toggle.setFixedSize(120, 42)
+        self.btn_toggle.setFont(QFont("Segoe UI", 9, QFont.Bold))
         self.btn_toggle.clicked.connect(lambda: self.toggle_callback(self.actuator_id))
         layout.addWidget(self.btn_toggle)
         
         self.update_state(actuator)
 
     def update_state(self, actuator: ActuatorItem):
-        # Update Feedback Badge
         if actuator.feedback_state:
             self.lbl_fb.setText("FB: RUNNING" if actuator.equipment_type == "MOTOR" else "FB: ON")
             self.lbl_fb.setStyleSheet("""
                 color: #10b981; background-color: rgba(16, 185, 129, 0.12);
-                border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 4px;
+                border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 4px;
             """)
         else:
             self.lbl_fb.setText("FB: OFF")
             self.lbl_fb.setStyleSheet("""
-                color: #64748b; background-color: rgba(100, 116, 139, 0.1);
-                border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px;
+                color: #64748b; background-color: rgba(100, 116, 139, 0.10);
+                border: 1px solid rgba(100, 116, 139, 0.25); border-radius: 4px;
             """)
             
-        # Update Toggle Button
         if actuator.command_state:
             self.btn_toggle.setText("STOP" if actuator.equipment_type == "MOTOR" else "TURN OFF")
             self.btn_toggle.setStyleSheet("""
                 QPushButton {
-                    background-color: #ef4444; color: #ffffff;
-                    border: 1px solid #dc2626; border-radius: 6px;
+                    background-color: #b91c1c; color: #ffffff;
+                    border: 1px solid #dc2626; border-radius: 4px;
                 }
                 QPushButton:hover { background-color: #dc2626; }
             """)
@@ -91,10 +97,10 @@ class ActuatorRowWidget(QFrame):
             self.btn_toggle.setText("START" if actuator.equipment_type == "MOTOR" else "TURN ON")
             self.btn_toggle.setStyleSheet("""
                 QPushButton {
-                    background-color: #10b981; color: #ffffff;
-                    border: 1px solid #059669; border-radius: 6px;
+                    background-color: #1e293b; color: #f1f5f9;
+                    border: 1px solid #334155; border-radius: 4px;
                 }
-                QPushButton:hover { background-color: #059669; }
+                QPushButton:hover { background-color: #2563eb; color: #ffffff; border: 1px solid #3b82f6; }
             """)
 
 
@@ -102,6 +108,20 @@ class ActuatorsScreen(BaseScreen):
     def __init__(self, controller=None, parent=None):
         super().__init__(controller, parent)
         self.rows = {}
+        
+        # Section Header
+        hdr = QHBoxLayout()
+        lbl_title = QLabel("DIGITAL ACTUATOR RELAY PANEL")
+        lbl_title.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        lbl_title.setStyleSheet("color: #cbd5e1; border: none;")
+        hdr.addWidget(lbl_title)
+        hdr.addStretch()
+        
+        lbl_sub = QLabel("RS-485 MODBUS SLAVE #2 (COILS 0x0000 - 0x0003)")
+        lbl_sub.setFont(QFont("Consolas", 8, QFont.Bold))
+        lbl_sub.setStyleSheet("color: #10b981; border: none;")
+        hdr.addWidget(lbl_sub)
+        self.layout.addLayout(hdr)
         
         if self.controller:
             for act in self.controller.actuators:

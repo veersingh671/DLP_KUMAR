@@ -1,186 +1,402 @@
 """
-Settings Screen for DLP KUMAR VFD HMI.
-Displays hardware communication interfaces, network diagnostic parameters,
-display brightness settings, and safe shutdown actions.
+Settings and RS-485 Diagnostics Screen for DLP KUMAR VFD HMI.
+ISA-101 Industrial Serial Bus Diagnostic Suite for Fuji FRENIC-Mini C2.
+Provides serial port configuration, baud rate selection, live packet sniffer,
+CRC validation counters, and system controls.
 """
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QApplication
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton,
+    QFrame, QComboBox, QSpinBox, QApplication, QScrollArea
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from ui.components import BaseScreen
-from core.system_state import NetworkState
 
 class SettingsScreen(BaseScreen):
     def __init__(self, controller=None, parent=None):
         super().__init__(controller, parent)
         
-        # Grid of settings tiles
-        from PyQt5.QtWidgets import QGridLayout
-        grid = QGridLayout()
-        grid.setSpacing(8)
+        # Connect to controller RS-485 updates
+        if self.controller:
+            self.controller.rs485_updated.connect(self._on_rs485_updated)
+            
+        main_layout = QHBoxLayout()
+        main_layout.setContentsMargins(4, 2, 4, 2)
+        main_layout.setSpacing(8)
         
-        # 1. Communication Config
-        card_comm = self._create_info_card(
-            "COMMUNICATION CONFIGURATION",
-            [
-                ("Physical Layer", "RS-485 Half-Duplex (Isolated)"),
-                ("Protocol", "Modbus RTU @ 9600 Baud"),
-                ("Framing", "8 Data Bits, No Parity, 1 Stop Bit (8N1)"),
-                ("Target Node ID", "Slave Address 0x01")
-            ]
-        )
-        grid.addWidget(card_comm, 0, 0)
-        
-        # 2. Network Info
-        self.card_net = self._create_info_card(
-            "NETWORK & CONNECTIVITY",
-            [
-                ("Status", "Connected"),
-                ("SSID", "DLP_INDUSTRIAL_WIFI"),
-                ("IP Address", "192.168.1.100"),
-                ("Hostname", "dlp-pi3a-hmi")
-            ]
-        )
-        grid.addWidget(self.card_net, 0, 1)
-        
-        # 3. System Diagnostic & Mode
-        card_sys = self._create_info_card(
-            "SYSTEM DIAGNOSTICS",
-            [
-                ("Target Platform", "Raspberry Pi 3A+ (ARMv8 64-bit)"),
-                ("Display Output", "5.0-inch HDMI TFT (800x480 native)"),
-                ("Operating Mode", "SIMULATION ACTIVE (Dev Mode)"),
-                ("HMI Software", "v1.1.0 (Production Core)")
-            ]
-        )
-        grid.addWidget(card_sys, 1, 0)
-        
-        # 4. Display Brightness / Hardware Backlight Control
-        card_disp = QFrame()
-        card_disp.setStyleSheet("""
+        # =====================================================================
+        # LEFT PANEL: RS-485 Bus Configuration & Live Traffic Sniffer
+        # =====================================================================
+        left_card = QFrame()
+        left_card.setStyleSheet("""
             QFrame {
-                background-color: #121824;
+                background-color: #131923;
                 border: 1px solid #1e293b;
-                border-radius: 8px;
+                border-radius: 6px;
             }
         """)
-        d_layout = QVBoxLayout(card_disp)
-        d_layout.setContentsMargins(14, 10, 14, 10)
+        left_layout = QVBoxLayout(left_card)
+        left_layout.setContentsMargins(12, 8, 12, 8)
+        left_layout.setSpacing(6)
         
-        lbl_disp_title = QLabel("DISPLAY BRIGHTNESS")
-        lbl_disp_title.setFont(QFont("Segoe UI", 10, QFont.Bold))
-        lbl_disp_title.setStyleSheet("color: #ff7a00; border: none;")
-        d_layout.addWidget(lbl_disp_title)
+        lbl_rs_title = QLabel("FUJI FRENIC-Mini (C2) RS-485 MODBUS")
+        lbl_rs_title.setFont(QFont("Segoe UI", 9, QFont.Bold))
+        lbl_rs_title.setStyleSheet("color: #cbd5e1; border: none;")
+        left_layout.addWidget(lbl_rs_title)
         
-        self.lbl_cur_b = QLabel("Current Level: 85 %")
-        self.lbl_cur_b.setFont(QFont("Segoe UI", 9))
-        self.lbl_cur_b.setStyleSheet("color: #94a3b8; border: none;")
-        d_layout.addWidget(self.lbl_cur_b)
+        # Row 1: COM Port selector + Refresh
+        row_port = QHBoxLayout()
+        row_port.setSpacing(6)
+        lbl_p = QLabel("Serial Port:")
+        lbl_p.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        lbl_p.setStyleSheet("color: #94a3b8; border: none; min-width: 75px;")
+        
+        self.combo_ports = QComboBox()
+        self.combo_ports.setFixedHeight(28)
+        self.combo_ports.setStyleSheet("""
+            QComboBox {
+                background-color: #1e293b; color: #f1f5f9;
+                border: 1px solid #334155; border-radius: 4px; padding: 2px 8px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #1e293b; color: #f1f5f9;
+                selection-background-color: #2563eb;
+            }
+        """)
+        
+        btn_scan = QPushButton("↻ SCAN")
+        btn_scan.setFixedSize(65, 28)
+        btn_scan.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        btn_scan.setCursor(Qt.PointingHandCursor)
+        btn_scan.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b; color: #cbd5e1;
+                border: 1px solid #334155; border-radius: 4px;
+            }
+            QPushButton:hover { background-color: #2563eb; color: #ffffff; border: 1px solid #3b82f6; }
+        """)
+        btn_scan.clicked.connect(self._scan_ports)
+        
+        row_port.addWidget(lbl_p)
+        row_port.addWidget(self.combo_ports, 1)
+        row_port.addWidget(btn_scan)
+        left_layout.addLayout(row_port)
+        
+        # Row 2: Baud Rate & Parity
+        row_params = QHBoxLayout()
+        row_params.setSpacing(6)
+        
+        lbl_b = QLabel("Baud Rate:")
+        lbl_b.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        lbl_b.setStyleSheet("color: #94a3b8; border: none;")
+        
+        self.combo_baud = QComboBox()
+        self.combo_baud.setFixedHeight(28)
+        self.combo_baud.addItems(["9600", "19200", "38400", "57600", "115200"])
+        self.combo_baud.setStyleSheet("""
+            QComboBox {
+                background-color: #1e293b; color: #f1f5f9;
+                border: 1px solid #334155; border-radius: 4px; padding: 2px 6px;
+            }
+        """)
+        
+        lbl_parity = QLabel("Parity:")
+        lbl_parity.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        lbl_parity.setStyleSheet("color: #94a3b8; border: none;")
+        
+        self.combo_parity = QComboBox()
+        self.combo_parity.setFixedHeight(28)
+        self.combo_parity.addItems(["None (8N1)", "Even (8E1)", "Odd (8O1)"])
+        self.combo_parity.setStyleSheet("""
+            QComboBox {
+                background-color: #1e293b; color: #f1f5f9;
+                border: 1px solid #334155; border-radius: 4px; padding: 2px 6px;
+            }
+        """)
+        
+        row_params.addWidget(lbl_b)
+        row_params.addWidget(self.combo_baud, 1)
+        row_params.addWidget(lbl_parity)
+        row_params.addWidget(self.combo_parity, 1)
+        left_layout.addLayout(row_params)
+        
+        # Row 3: Slave Node ID & Action Buttons
+        row_actions = QHBoxLayout()
+        row_actions.setSpacing(6)
+        
+        lbl_slave = QLabel("Slave ID:")
+        lbl_slave.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        lbl_slave.setStyleSheet("color: #94a3b8; border: none;")
+        
+        self.spin_slave = QSpinBox()
+        self.spin_slave.setRange(1, 247)
+        self.spin_slave.setValue(1)
+        self.spin_slave.setFixedHeight(28)
+        self.spin_slave.setFixedWidth(55)
+        self.spin_slave.setStyleSheet("""
+            QSpinBox {
+                background-color: #1e293b; color: #f1f5f9;
+                border: 1px solid #334155; border-radius: 4px; padding: 2px 4px;
+            }
+        """)
+        
+        self.btn_apply = QPushButton("CONNECT")
+        self.btn_apply.setFixedHeight(28)
+        self.btn_apply.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        self.btn_apply.setCursor(Qt.PointingHandCursor)
+        self.btn_apply.setStyleSheet("""
+            QPushButton {
+                background-color: #15803d; color: #ffffff;
+                border: 1px solid #16a34a; border-radius: 4px; font-weight: bold;
+            }
+            QPushButton:hover { background-color: #16a34a; }
+        """)
+        self.btn_apply.clicked.connect(self._apply_rs485)
+        
+        self.btn_mode = QPushButton("SIMULATION: ON")
+        self.btn_mode.setFixedHeight(28)
+        self.btn_mode.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        self.btn_mode.setCursor(Qt.PointingHandCursor)
+        self.btn_mode.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b; color: #cbd5e1;
+                border: 1px solid #334155; border-radius: 4px;
+            }
+            QPushButton:hover { background-color: #334155; color: #ffffff; }
+        """)
+        self.btn_mode.clicked.connect(self._toggle_mode)
+        
+        row_actions.addWidget(lbl_slave)
+        row_actions.addWidget(self.spin_slave)
+        row_actions.addWidget(self.btn_apply, 1)
+        row_actions.addWidget(self.btn_mode, 1)
+        left_layout.addLayout(row_actions)
+        
+        # RS-485 Hex Packet Sniffer Frame
+        sniffer_frame = QFrame()
+        sniffer_frame.setStyleSheet("""
+            QFrame {
+                background-color: #090d13;
+                border: 1px solid #1e293b;
+                border-radius: 5px;
+            }
+        """)
+        sn_layout = QVBoxLayout(sniffer_frame)
+        sn_layout.setContentsMargins(8, 6, 8, 6)
+        sn_layout.setSpacing(3)
+        
+        sn_header = QHBoxLayout()
+        lbl_sn = QLabel("LIVE MODBUS TRAFFIC MONITOR")
+        lbl_sn.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        lbl_sn.setStyleSheet("color: #64748b; border: none;")
+        
+        self.lbl_packet_stats = QLabel("TX: 0 | RX: 0 | CRC ERR: 0")
+        self.lbl_packet_stats.setFont(QFont("Consolas", 8, QFont.Bold))
+        self.lbl_packet_stats.setStyleSheet("color: #10b981; border: none;")
+        
+        sn_header.addWidget(lbl_sn)
+        sn_header.addStretch()
+        sn_header.addWidget(self.lbl_packet_stats)
+        sn_layout.addLayout(sn_header)
+        
+        self.lbl_tx_hex = QLabel("TX: [WAITING FOR TRANSMISSION]")
+        self.lbl_tx_hex.setFont(QFont("Consolas", 8))
+        self.lbl_tx_hex.setStyleSheet("color: #cbd5e1; border: none;")
+        sn_layout.addWidget(self.lbl_tx_hex)
+        
+        self.lbl_rx_hex = QLabel("RX: [WAITING FOR RESPONSE]")
+        self.lbl_rx_hex.setFont(QFont("Consolas", 8))
+        self.lbl_rx_hex.setStyleSheet("color: #10b981; border: none;")
+        sn_layout.addWidget(self.lbl_rx_hex)
+        
+        row_ping = QHBoxLayout()
+        self.lbl_last_err = QLabel("Bus Status: READY")
+        self.lbl_last_err.setFont(QFont("Segoe UI", 7))
+        self.lbl_last_err.setStyleSheet("color: #64748b; border: none;")
+        
+        btn_ping = QPushButton("PING BUS")
+        btn_ping.setFixedSize(80, 24)
+        btn_ping.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        btn_ping.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b; color: #cbd5e1;
+                border: 1px solid #334155; border-radius: 4px;
+            }
+            QPushButton:hover { background-color: #2563eb; color: #ffffff; border: 1px solid #3b82f6; }
+        """)
+        btn_ping.clicked.connect(self._ping_bus)
+        
+        row_ping.addWidget(self.lbl_last_err, 1)
+        row_ping.addWidget(btn_ping)
+        sn_layout.addLayout(row_ping)
+        
+        left_layout.addWidget(sniffer_frame)
+        main_layout.addWidget(left_card, 55)
+        
+        # =====================================================================
+        # RIGHT PANEL: System Diagnostics, Brightness & Actions
+        # =====================================================================
+        right_card = QFrame()
+        right_card.setStyleSheet("""
+            QFrame {
+                background-color: #131923;
+                border: 1px solid #1e293b;
+                border-radius: 6px;
+            }
+        """)
+        right_layout = QVBoxLayout(right_card)
+        right_layout.setContentsMargins(12, 8, 12, 8)
+        right_layout.setSpacing(6)
+        
+        lbl_sys_title = QLabel("SYSTEM & DISPLAY CONTROL")
+        lbl_sys_title.setFont(QFont("Segoe UI", 9, QFont.Bold))
+        lbl_sys_title.setStyleSheet("color: #cbd5e1; border: none;")
+        right_layout.addWidget(lbl_sys_title)
+        
+        # Hardware Info Grid
+        info_frame = QFrame()
+        info_frame.setStyleSheet("""
+            QFrame { background-color: #090d13; border: 1px solid #1e293b; border-radius: 5px; }
+        """)
+        inf_layout = QGridLayout(info_frame)
+        inf_layout.setContentsMargins(8, 6, 8, 6)
+        inf_layout.setSpacing(3)
+        
+        def _add_kv(grid, r, k, v):
+            lk = QLabel(k)
+            lk.setFont(QFont("Segoe UI", 7, QFont.Bold))
+            lk.setStyleSheet("color: #64748b; border: none;")
+            lv = QLabel(v)
+            lv.setFont(QFont("Consolas", 7))
+            lv.setStyleSheet("color: #f1f5f9; border: none;")
+            grid.addWidget(lk, r, 0)
+            grid.addWidget(lv, r, 1)
+            
+        _add_kv(inf_layout, 0, "Target Drive:", "Fuji FRENIC-Mini (FRN-C2)")
+        _add_kv(inf_layout, 1, "RS-485 Port:", "Modbus RTU (Pins 4 DX+ / 5 DX-)")
+        _add_kv(inf_layout, 2, "Cmd Registers:", "S06 (0x0706) / S05 (0x0705)")
+        _add_kv(inf_layout, 3, "Mon Registers:", "M09, M11, M12, M13, M14, M16")
+        _add_kv(inf_layout, 4, "Link Setting:", "H30=3 (RS-485 Run & Freq priority)")
+        right_layout.addWidget(info_frame)
+        
+        # Brightness Selector
+        lbl_b_title = QLabel("DISPLAY BRIGHTNESS")
+        lbl_b_title.setFont(QFont("Segoe UI", 7, QFont.Bold))
+        lbl_b_title.setStyleSheet("color: #64748b; border: none; margin-top: 2px;")
+        right_layout.addWidget(lbl_b_title)
         
         b_presets = QHBoxLayout()
+        b_presets.setSpacing(6)
         for level in [25, 50, 75, 100]:
             btn_b = QPushButton(f"{level}%")
-            btn_b.setFixedHeight(36)
-            btn_b.setFont(QFont("Segoe UI", 9, QFont.Bold))
+            btn_b.setFixedHeight(26)
+            btn_b.setFont(QFont("Consolas", 8, QFont.Bold))
             btn_b.setStyleSheet("""
                 QPushButton {
-                    background-color: #1e293b; color: #f8fafc;
+                    background-color: #1e293b; color: #cbd5e1;
                     border: 1px solid #334155; border-radius: 4px;
                 }
-                QPushButton:hover { background-color: #334155; color: #38bdf8; }
+                QPushButton:hover { background-color: #2563eb; color: #ffffff; border: 1px solid #3b82f6; }
             """)
-            btn_b.clicked.connect(lambda checked, l=level: self._set_brightness(l))
+            btn_b.clicked.connect(lambda ch, l=level: self._set_brightness(l))
             b_presets.addWidget(btn_b)
-        d_layout.addLayout(b_presets)
-        d_layout.addStretch()
+        right_layout.addLayout(b_presets)
         
-        grid.addWidget(card_disp, 1, 1)
-        self.layout.addLayout(grid)
+        right_layout.addStretch()
         
-        # Bottom Actions
-        act_row = QHBoxLayout()
-        act_row.setSpacing(10)
-        
-        btn_reboot = QPushButton("⟳  RESTART APPLICATION")
-        btn_reboot.setFixedHeight(48)
-        btn_reboot.setFont(QFont("Segoe UI", 10, QFont.Bold))
-        btn_reboot.setStyleSheet("""
-            QPushButton {
-                background-color: #1e293b; color: #38bdf8;
-                border: 1px solid #334155; border-radius: 6px;
-            }
-            QPushButton:hover { background-color: #334155; }
-        """)
-        btn_reboot.clicked.connect(self._restart_app)
-        
-        btn_exit = QPushButton("✕  CLOSE HMI")
-        btn_exit.setFixedHeight(48)
-        btn_exit.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        # App Exit Button
+        btn_exit = QPushButton("✕  CLOSE HMI APPLICATION")
+        btn_exit.setFixedHeight(34)
+        btn_exit.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        btn_exit.setCursor(Qt.PointingHandCursor)
         btn_exit.setStyleSheet("""
             QPushButton {
-                background-color: rgba(239, 68, 68, 0.15); color: #ef4444;
-                border: 1px solid #ef4444; border-radius: 6px;
+                background-color: #1e293b; color: #fca5a5;
+                border: 1px solid #991b1b; border-radius: 4px;
             }
-            QPushButton:hover { background-color: #ef4444; color: #ffffff; }
+            QPushButton:hover { background-color: #991b1b; color: #ffffff; }
         """)
-        btn_exit.clicked.connect(self._exit_app)
+        btn_exit.clicked.connect(QApplication.quit)
+        right_layout.addWidget(btn_exit)
         
-        act_row.addWidget(btn_reboot)
-        act_row.addWidget(btn_exit)
-        self.layout.addLayout(act_row)
+        main_layout.addWidget(right_card, 45)
+        self.layout.addLayout(main_layout)
+        
+        self._scan_ports()
+
+    def _scan_ports(self):
+        self.combo_ports.clear()
+        if self.controller:
+            ports = self.controller.get_available_serial_ports()
+            for p in ports:
+                self.combo_ports.addItem(f"{p['device']} ({p['description']})", p['device'])
+        
+        self.combo_ports.addItem("Virtual Loopback Bus (Simulation)", "VIRTUAL")
         
         if self.controller:
-            self.controller.network_updated.connect(self.update_network_info)
+            current_port = self.controller.modbus.port_name
+            for i in range(self.combo_ports.count()):
+                if self.combo_ports.itemData(i) == current_port:
+                    self.combo_ports.setCurrentIndex(i)
+                    break
 
-    def _create_info_card(self, title, items):
-        frame = QFrame()
-        frame.setStyleSheet("""
-            QFrame {
-                background-color: #121824;
-                border: 1px solid #1e293b;
-                border-radius: 8px;
-            }
-        """)
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(14, 10, 14, 10)
-        layout.setSpacing(3)
+    def _apply_rs485(self):
+        port = self.combo_ports.currentData() or "COM3"
+        baud = int(self.combo_baud.currentText())
+        parity_txt = self.combo_parity.currentText()
+        parity = "N" if "None" in parity_txt else ("E" if "Even" in parity_txt else "O")
+        slave_id = self.spin_slave.value()
         
-        lbl_t = QLabel(title)
-        lbl_t.setFont(QFont("Segoe UI", 10, QFont.Bold))
-        lbl_t.setStyleSheet("color: #ff7a00; border: none;")
-        layout.addWidget(lbl_t)
-        
-        for k, v in items:
-            row = QHBoxLayout()
-            lbl_k = QLabel(k)
-            lbl_k.setFont(QFont("Segoe UI", 8))
-            lbl_k.setStyleSheet("color: #64748b; border: none;")
-            
-            lbl_v = QLabel(v)
-            lbl_v.setFont(QFont("Segoe UI", 8, QFont.Bold))
-            lbl_v.setStyleSheet("color: #f8fafc; border: none;")
-            lbl_v.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            
-            row.addWidget(lbl_k)
-            row.addStretch()
-            row.addWidget(lbl_v)
-            layout.addLayout(row)
-            
-        layout.addStretch()
-        return frame
-
-    def _set_brightness(self, level):
-        self.lbl_cur_b.setText(f"Current Level: {level} %")
-
-    def _restart_app(self):
-        # Cleanly trigger restart or reload
         if self.controller:
-            self.controller._simulation_tick()
+            success = self.controller.reconfigure_rs485(port, baud, parity, slave_id)
+            if success:
+                self.btn_apply.setText("CONNECTED")
+                self.btn_apply.setStyleSheet("""
+                    QPushButton { background-color: #15803d; color: #ffffff; border: 1px solid #16a34a; border-radius: 4px; }
+                """)
+            else:
+                self.btn_apply.setText("RETRY")
+                self.btn_apply.setStyleSheet("""
+                    QPushButton { background-color: #b91c1c; color: #ffffff; border: 1px solid #dc2626; border-radius: 4px; }
+                """)
 
-    def _exit_app(self):
-        QApplication.quit()
+    def _toggle_mode(self):
+        if not self.controller:
+            return
+        current_sim = self.controller.modbus.is_simulation
+        new_sim = not current_sim
+        self.controller.toggle_simulation_mode(new_sim)
+        
+        if new_sim:
+            self.btn_mode.setText("SIMULATION: ON")
+            self.btn_mode.setStyleSheet("""
+                QPushButton { background-color: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 4px; }
+            """)
+        else:
+            self.btn_mode.setText("PHYSICAL BUS: ACTIVE")
+            self.btn_mode.setStyleSheet("""
+                QPushButton { background-color: #15803d; color: #ffffff; border: 1px solid #16a34a; border-radius: 4px; }
+            """)
 
-    def update_network_info(self, net: NetworkState):
+    def _ping_bus(self):
+        if self.controller:
+            res = self.controller.send_test_modbus_ping()
+            stat = res.get("poll_result", "UNKNOWN")
+            self.lbl_last_err.setText(f"Ping: {stat}")
+            self.lbl_last_err.setStyleSheet("color: #10b981;" if "SUCCESS" in stat else "color: #ef4444;")
+
+    def _set_brightness(self, level: int):
         pass
+
+    def _on_rs485_updated(self, diag: dict):
+        tx = diag.get("tx_count", 0)
+        rx = diag.get("rx_count", 0)
+        crc = diag.get("crc_errors", 0)
+        last_tx = diag.get("last_tx_hex", "NONE")
+        last_rx = diag.get("last_rx_hex", "NONE")
+        
+        self.lbl_packet_stats.setText(f"TX: {tx} | RX: {rx} | CRC ERR: {crc}")
+        self.lbl_packet_stats.setStyleSheet("color: #10b981;" if crc == 0 else "color: #ef4444;")
+        
+        self.lbl_tx_hex.setText(f"TX: [{last_tx}]")
+        self.lbl_rx_hex.setText(f"RX: [{last_rx}]")
